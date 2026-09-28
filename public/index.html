@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدیریت کاربران مبین نت</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; transition: background-color 0.3s, color 0.3s; }
+    .dark body { background-color: #0b0f19; color: #f3f4f6; }
+    .light body { background-color: #f3f4f6; color: #111827; }
+    
+    .dark .glass { background: rgba(17, 24, 39, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .light .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px); border: 1px solid rgba(0, 0, 0, 0.1); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+  <!-- Login Card -->
+  <div id="loginCard" class="w-full max-w-md glass rounded-3xl p-8 space-y-6">
+    <div class="text-center space-y-2">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600/20 text-indigo-500 border border-indigo-500/30">
+        <i class="fa-solid fa-wifi text-3xl"></i>
+      </div>
+      <h1 class="text-2xl font-black">ورود به پنل مبین نت</h1>
+      <p class="text-xs text-gray-400">Mobin Net Xray Controller</p>
+    </div>
+
+    <!-- Error Alert Message -->
+    <div id="loginErrorMsg" class="hidden p-3 bg-red-500/20 border border-red-500/40 text-red-400 rounded-xl text-xs text-center font-bold"></div>
+
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">نام کاربری</label>
+        <input type="text" id="loginUsername" class="w-full bg-gray-900/10 dark:bg-gray-900/80 border border-gray-700/50 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none text-sm" required>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">رمز عبور</label>
+        <input type="password" id="loginPassword" class="w-full bg-gray-900/10 dark:bg-gray-900/80 border border-gray-700/50 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none text-sm" required>
+      </div>
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-600/30">ورود به پنل</button>
+    </form>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div id="dashboard" class="w-full max-w-5xl glass rounded-3xl p-6 sm:p-8 hidden space-y-6">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-gray-700/40">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+          <i class="fa-solid fa-wifi text-2xl"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-black">مدیریت کاربران مبین نت</h2>
+          <p class="text-xs text-gray-400">وضعیت سرور: <span class="text-emerald-400 font-bold">● آنلاین</span> | خوش آمدید <span id="adminDisplayName" class="font-bold text-indigo-400"></span></p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="openMainSettingsModal()" class="bg-gray-800/20 dark:bg-gray-800 hover:bg-gray-700/40 px-4 py-2 rounded-xl text-xs flex items-center gap-2 border border-gray-700/30"><i class="fa-solid fa-gear"></i> تنظیمات</button>
+        <button onclick="logout()" class="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-4 py-2 rounded-xl text-xs flex items-center gap-2"><i class="fa-solid fa-power-off"></i> خروج</button>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="bg-gray-900/10 dark:bg-gray-900/80 border border-gray-700/40 p-4 rounded-2xl">
+        <div class="text-xs text-gray-400 mb-1"><i class="fa-solid fa-users text-indigo-400 ml-1"></i> کل کاربران</div>
+        <div class="text-xl font-bold" id="statTotalUsers">0</div>
+      </div>
+      <div class="bg-gray-900/10 dark:bg-gray-900/80 border border-gray-700/40 p-4 rounded-2xl">
+        <div class="text-xs text-gray-400 mb-1"><i class="fa-solid fa-user-check text-emerald-400 ml-1"></i> کاربران آنلاین</div>
+        <div class="text-xl font-bold text-emerald-400" id="statActiveUsers">0</div>
+      </div>
+      <div class="bg-gray-900/10 dark:bg-gray-900/80 border border-gray-700/40 p-4 rounded-2xl">
+        <div class="text-xs text-gray-400 mb-1"><i class="fa-solid fa-chart-line text-sky-400 ml-1"></i> مصرف کل</div>
+        <div class="text-xl font-bold" id="statTotalTraffic">0 GB</div>
+      </div>
+      <div class="bg-gray-900/10 dark:bg-gray-900/80 border border-gray-700/40 p-4 rounded-2xl">
+        <div class="text-xs text-gray-400 mb-1"><i class="fa-brands fa-telegram text-sky-400 ml-1"></i> پشتیبانی</div>
+        <div class="text-xs font-bold text-sky-400">@Mobin684</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-between items-center">
+      <button onclick="openUserModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+        <i class="fa-solid fa-user-plus"></i> ساخت کاربر جدید
+      </button>
+    </div>
+
+    <!-- User Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-right border-collapse">
+        <thead>
+          <tr class="text-gray-400 border-b border-gray-700/40 text-xs">
+            <th class="p-3">نام کاربر</th>
+            <th class="p-3">حجم مصرفی</th>
+            <th class="p-3">اعتبار</th>
+            <th class="p-3">وضعیت</th>
+            <th class="p-3 text-center">عملیات</th>
+          </tr>
+        </thead>
+        <tbody id="userTable" class="divide-y divide-gray-700/30 text-xs"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings Main Modal -->
+  <div id="mainSettingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass max-w-md w-full rounded-3xl p-6 space-y-4">
+      <h3 class="text-lg font-bold">تنظیمات پنل مبین نت</h3>
+      <div class="space-y-3">
+        <!-- Theme Toggle Button -->
+        <button onclick="toggleTheme()" class="w-full bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 p-3 rounded-2xl flex items-center justify-between text-xs font-semibold">
+          <span><i class="fa-solid fa-circle-half-stroke text-indigo-400 mr-2"></i> تغییر تم (روشن / تاریک)</span>
+          <span id="themeLabel" class="text-gray-400">تاریک</span>
+        </button>
+
+        <!-- Change Password Button -->
+        <button onclick="openChangePasswordModal()" class="w-full bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 p-3 rounded-2xl flex items-center justify-between text-xs font-semibold">
+          <span><i class="fa-solid fa-key text-amber-400 mr-2"></i> تغییر رمز عبور</span>
+          <i class="fa-solid fa-chevron-left text-gray-500"></i>
+        </button>
+
+        <!-- Other Settings / Admins Button -->
+        <button id="adminMgmtBtn" onclick="openAdminMgmtModal()" class="w-full bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 p-3 rounded-2xl flex items-center justify-between text-xs font-semibold">
+          <span><i class="fa-solid fa-users-gear text-sky-400 mr-2"></i> سایر تنظیمات (مدیریت ادمین‌ها)</span>
+          <i class="fa-solid fa-chevron-left text-gray-500"></i>
+        </button>
+      </div>
+
+      <button onclick="closeMainSettingsModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl text-xs font-bold mt-2">بستن</button>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="changePasswordModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass max-w-md w-full rounded-3xl p-6 space-y-4">
+      <h3 class="text-lg font-bold">تغییر رمز عبور</h3>
+      <form id="changePasswordForm" class="space-y-3">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">رمز عبور جدید</label>
+          <input type="password" id="newPasswordInput" class="w-full bg-gray-900/80 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" required>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs">ذخیره رمز جدید</button>
+          <button type="button" onclick="closeChangePasswordModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-xl text-xs">انصراف</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Management Modal -->
+  <div id="adminMgmtModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass max-w-xl w-full rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold">مدیریت ادمین‌ها و دسترسی‌ها</h3>
+        <button onclick="openAddAdminModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> افزودن ادمین
+        </button>
+      </div>
+
+      <!-- Admin List Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-right border-collapse">
+          <thead>
+            <tr class="text-gray-400 border-b border-gray-700/40 text-xs">
+              <th class="p-2">نام ادمین</th>
+              <th class="p-2">نام کاربری</th>
+              <th class="p-2">سقف حجم مجاز</th>
+              <th class="p-2">عملیات</th>
+            </tr>
+          </thead>
+          <tbody id="adminTable" class="divide-y divide-gray-700/30 text-xs"></tbody>
+        </table>
+      </div>
+
+      <button onclick="closeAdminMgmtModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-xl text-xs font-bold">بازگشت</button>
+    </div>
+  </div>
+
+  <!-- Add Admin Sub-Modal -->
+  <div id="addAdminModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass max-w-md w-full rounded-3xl p-6 space-y-4">
+      <h3 class="text-lg font-bold">افزودن ادمین جدید</h3>
+      <form id="addAdminForm" class="space-y-3">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">نام ادمین</label>
+          <input type="text" id="adminNameInput" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" required>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">نام کاربری</label>
+          <input type="text" id="adminUsernameInput" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" required>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">رمز عبور</label>
+          <input type="password" id="adminPasswordInput" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" required>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">سقف کل حجم مجاز (GB) - 0 برای نامحدود</label>
+          <input type="number" id="adminQuotaInput" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" value="50">
+        </div>
+        
+        <div class="space-y-1">
+          <label class="block text-xs text-gray-400 mb-1">تعیین دسترسی‌ها:</label>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="permCreate" checked> ساخت کاربر</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="permEdit" checked> ویرایش کاربر</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="permDelete" checked> حذف کاربر</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="permReset" checked> ریست حجم</label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs">ایجاد ادمین</button>
+          <button type="button" onclick="closeAddAdminModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-xl text-xs">انصراف</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Add / Edit Modal -->
+  <div id="userModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass max-w-md w-full rounded-3xl p-6 space-y-4">
+      <h3 id="userModalTitle" class="text-lg font-bold">ساخت کاربر جدید</h3>
+      <form id="userForm" class="space-y-3">
+        <input type="hidden" id="editUserId">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">نام کاربر</label>
+          <input type="text" id="modalUserName" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" required>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">محدودیت حجم (GB) - 0 برای نامحدود</label>
+          <input type="number" id="modalUserLimit" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" value="0">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">مدت اعتبار (روز) - 0 برای نامحدود</label>
+          <input type="number" id="modalUserDays" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" value="30">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs">ذخیره</button>
+          <button type="button" onclick="closeUserModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-xl text-xs">انصراف</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- QR & Sub Modal -->
+  <div id="qrModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass max-w-md w-full rounded-3xl p-6 text-center space-y-4">
+      <h3 id="qrModalTitle" class="text-lg font-bold"></h3>
+      <div class="flex justify-center bg-white p-3 rounded-xl w-fit mx-auto"><canvas id="qrcode"></canvas></div>
+      <div id="configLinks" class="text-xs text-right space-y-2 bg-gray-900/90 p-3 rounded-xl border border-gray-800 break-all font-mono"></div>
+      <button onclick="closeQrModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-xl text-xs">بستن</button>
+    </div>
+  </div>
+
+  <script>
+    let currentAdmin = null;
+
+    async function api(url, method = 'GET', body) {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) {
+          document.getElementById('loginCard').classList.remove('hidden');
+          document.getElementById('dashboard').classList.add('hidden');
+        }
+        throw new Error(data.error || 'خطایی رخ داد.');
+      }
+      return data;
+    }
+
+    document.getElementById('loginForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const errBox = document.getElementById('loginErrorMsg');
+      errBox.classList.add('hidden');
+      try {
+        await api('/api/login', 'POST', {
+          username: document.getElementById('loginUsername').value,
+          password: document.getElementById('loginPassword').value
+        });
+        loadDashboard();
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+      }
+    };
+
+    async function loadDashboard() {
+      currentAdmin = await api('/api/me');
+      document.getElementById('adminDisplayName').innerText = currentAdmin.name;
+      document.getElementById('loginCard').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+
+      if (currentAdmin.role !== 'superadmin') {
+        document.getElementById('adminMgmtBtn').classList.add('hidden');
+      } else {
+        document.getElementById('adminMgmtBtn').classList.remove('hidden');
+      }
+
+      const users = await api('/api/users');
+      document.getElementById('statTotalUsers').innerText = users.length;
+      document.getElementById('statActiveUsers').innerText = users.filter(u => u.currentStatus === 'active').length;
+      const totalUsed = users.reduce((acc, u) => acc + (u.usedGB || 0), 0);
+      document.getElementById('statTotalTraffic').innerText = totalUsed.toFixed(1) + ' GB';
+
+      const tbody = document.getElementById('userTable');
+      tbody.innerHTML = users.map(u => {
+        let statusBadge = '<span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px]">فعال</span>';
+        if (u.currentStatus === 'disabled') statusBadge = '<span class="px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded-full text-[10px]">غیرفعال</span>';
+        if (u.currentStatus === 'expired') statusBadge = '<span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-[10px]">منقضی</span>';
+        if (u.currentStatus === 'quota_exceeded') statusBadge = '<span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full text-[10px]">اتمام حجم</span>';
+
+        const used = (u.usedGB || 0).toFixed(1);
+        const limit = u.limitGB > 0 ? u.limitGB + ' GB' : 'نامحدود';
+
+        let daysText = 'نامحدود';
+        if (u.expireTimestamp && u.expireTimestamp > 0) {
+          const diffMs = u.expireTimestamp - Date.now();
+          daysText = diffMs > 0 ? Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + ' روز' : 'منقضی شده';
+        }
+
+        return `
+          <tr class="hover:bg-gray-800/30 border-b border-gray-700/30">
+            <td class="p-3 font-semibold">${u.name}</td>
+            <td class="p-3 text-gray-400">${used} / ${limit}</td>
+            <td class="p-3 text-gray-400">${daysText}</td>
+            <td class="p-3">${statusBadge}</td>
+            <td class="p-3 flex justify-center gap-1.5">
+              <button onclick="showSub('${u.uuid}', '${u.name}')" class="bg-indigo-500/20 text-indigo-400 p-2 rounded-lg hover:bg-indigo-500/30" title="ساب لینک"><i class="fa-solid fa-qrcode"></i></button>
+              <button onclick="openEditModal('${u.id}', '${u.name}', ${u.limitGB || 0}, ${u.expireDays || 0})" class="bg-sky-500/20 text-sky-400 p-2 rounded-lg hover:bg-sky-500/30" title="ویرایش"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="resetTraffic('${u.id}')" class="bg-emerald-500/20 text-emerald-400 p-2 rounded-lg hover:bg-emerald-500/30" title="ریست حجم"><i class="fa-solid fa-rotate-left"></i></button>
+              <button onclick="toggleUser('${u.id}')" class="bg-amber-500/20 text-amber-400 p-2 rounded-lg hover:bg-amber-500/30" title="تغییر وضعیت"><i class="fa-solid fa-power-off"></i></button>
+              <button onclick="deleteUser('${u.id}')" class="bg-red-500/20 text-red-400 p-2 rounded-lg hover:bg-red-500/30" title="حذف"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Modals Handlers
+    function openMainSettingsModal() { document.getElementById('mainSettingsModal').classList.remove('hidden'); }
+    function closeMainSettingsModal() { document.getElementById('mainSettingsModal').classList.add('hidden'); }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+        document.getElementById('themeLabel').innerText = 'روشن';
+      } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+        document.getElementById('themeLabel').innerText = 'تاریک';
+      }
+    }
+
+    function openChangePasswordModal() {
+      closeMainSettingsModal();
+      document.getElementById('changePasswordModal').classList.remove('hidden');
+    }
+    function closeChangePasswordModal() { document.getElementById('changePasswordModal').classList.add('hidden'); }
+
+    document.getElementById('changePasswordForm').onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/change-password', 'POST', { newPassword: document.getElementById('newPasswordInput').value });
+        alert('رمز عبور با موفقیت تغییر کرد.');
+        closeChangePasswordModal();
+      } catch (err) { alert(err.message); }
+    };
+
+    // Admin Management
+    async function openAdminMgmtModal() {
+      closeMainSettingsModal();
+      document.getElementById('adminMgmtModal').classList.remove('hidden');
+      loadAdminsTable();
+    }
+    function closeAdminMgmtModal() { document.getElementById('adminMgmtModal').classList.add('hidden'); }
+
+    async function loadAdminsTable() {
+      const admins = await api('/api/admins');
+      const tbody = document.getElementById('adminTable');
+      tbody.innerHTML = admins.map(a => `
+        <tr class="hover:bg-gray-800/30 border-b border-gray-700/30">
+          <td class="p-2 font-semibold">${a.name} ${a.role === 'superadmin' ? '<span class="text-xs text-amber-400">(اصلی)</span>' : ''}</td>
+          <td class="p-2 text-gray-400">${a.username}</td>
+          <td class="p-2 text-gray-400">${a.allocatedGB} / ${a.maxQuotaGB > 0 ? a.maxQuotaGB + ' GB' : 'نامحدود'}</td>
+          <td class="p-2">
+            ${a.role !== 'superadmin' ? `<button onclick="deleteAdmin('${a.id}')" class="bg-red-500/20 text-red-400 p-1.5 rounded-lg"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openAddAdminModal() { document.getElementById('addAdminModal').classList.remove('hidden'); }
+    function closeAddAdminModal() { document.getElementById('addAdminModal').classList.add('hidden'); }
+
+    document.getElementById('addAdminForm').onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/admins', 'POST', {
+          name: document.getElementById('adminNameInput').value,
+          username: document.getElementById('adminUsernameInput').value,
+          password: document.getElementById('adminPasswordInput').value,
+          maxQuotaGB: document.getElementById('adminQuotaInput').value,
+          permissions: [
+            document.getElementById('permCreate').checked && 'create_users',
+            document.getElementById('permEdit').checked && 'edit_users',
+            document.getElementById('permDelete').checked && 'delete_users',
+            document.getElementById('permReset').checked && 'reset_traffic',
+          ].filter(Boolean)
+        });
+        closeAddAdminModal();
+        loadAdminsTable();
+      } catch (err) { alert(err.message); }
+    };
+
+    async function deleteAdmin(id) {
+      if (confirm('آیا از حذف این ادمین مطمئن هستید؟')) {
+        await api(`/api/admins/${id}`, 'DELETE');
+        loadAdminsTable();
+      }
+    }
+
+    // User Operations
+    function openUserModal() {
+      document.getElementById('editUserId').value = '';
+      document.getElementById('userModalTitle').innerText = 'ساخت کاربر جدید';
+      document.getElementById('modalUserName').value = '';
+      document.getElementById('modalUserLimit').value = '0';
+      document.getElementById('modalUserDays').value = '30';
+      document.getElementById('userModal').classList.remove('hidden');
+    }
+
+    function openEditModal(id, name, limit, days) {
+      document.getElementById('editUserId').value = id;
+      document.getElementById('userModalTitle').innerText = 'ویرایش کاربر';
+      document.getElementById('modalUserName').value = name;
+      document.getElementById('modalUserLimit').value = limit;
+      document.getElementById('modalUserDays').value = days;
+      document.getElementById('userModal').classList.remove('hidden');
+    }
+
+    function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
+
+    document.getElementById('userForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editUserId').value;
+      const body = {
+        name: document.getElementById('modalUserName').value,
+        limitGB: document.getElementById('modalUserLimit').value,
+        expireDays: document.getElementById('modalUserDays').value
+      };
+
+      try {
+        if (id) {
+          await api(`/api/users/${id}`, 'PUT', body);
+        } else {
+          await api('/api/users', 'POST', body);
+        }
+        closeUserModal();
+        loadDashboard();
+      } catch (err) { alert(err.message); }
+    };
+
+    async function resetTraffic(id) {
+      if (confirm("آیا حجم مصرفی این کاربر صفر شود؟")) {
+        await api(`/api/users/${id}/reset-traffic`, 'PUT');
+        loadDashboard();
+      }
+    }
+
+    async function toggleUser(id) {
+      await api(`/api/users/${id}/toggle`, 'PUT');
+      loadDashboard();
+    }
+
+    async function deleteUser(id) {
+      if (confirm("آیا از حذف این کاربر مطمئن هستید؟")) {
+        await api(`/api/users/${id}`, 'DELETE');
+        loadDashboard();
+      }
+    }
+
+    function showSub(uuid, name) {
+      const subUrl = `${window.location.protocol}//${window.location.host}/sub/${uuid}`;
+      document.getElementById('qrModalTitle').innerText = `ساب‌لینک کاربر: ${name}`;
+      QRCode.toCanvas(document.getElementById('qrcode'), subUrl, { width: 160 });
+      document.getElementById('configLinks').innerHTML = `
+        <div class="mb-2"><strong class="text-indigo-400">لینک ساب‌لینک:</strong><br>${subUrl}</div>
+        <button onclick="navigator.clipboard.writeText('${subUrl}'); alert('کپی شد!')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 rounded-lg text-xs font-bold">کپی ساب‌لینک</button>
+      `;
+      document.getElementById('qrModal').classList.remove('hidden');
+    }
+
+    function closeQrModal() { document.getElementById('qrModal').classList.add('hidden'); }
+    async function logout() { await api('/api/logout', 'POST'); location.reload(); }
+
+    loadDashboard().catch(() => {});
+  </script>
+</body>
+</html>
